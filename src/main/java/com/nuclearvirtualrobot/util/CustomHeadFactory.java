@@ -1,18 +1,22 @@
 package com.nuclearvirtualrobot.util;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.profile.ProfileProperty;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public final class CustomHeadFactory {
+    private static final String PROFILE_FIELD = "profile";
+
     private CustomHeadFactory() {
     }
 
@@ -23,11 +27,17 @@ public final class CustomHeadFactory {
             return item;
         }
 
-        UUID uuid = UUID.randomUUID();
-        PlayerProfile profile = Bukkit.createProfile(uuid, "head-" + uuid);
-        profile.setProperty(new ProfileProperty("textures", base64));
-        skullMeta.setOwnerProfile(profile);
-        item.setItemMeta(skullMeta);
+        try {
+            UUID uuid = UUID.randomUUID();
+            GameProfile profile = new GameProfile(uuid, "head-" + uuid);
+            profile.getProperties().put("textures", new Property("textures", base64));
+            Field profileField = skullMeta.getClass().getDeclaredField(PROFILE_FIELD);
+            profileField.setAccessible(true);
+            profileField.set(skullMeta, profile);
+            item.setItemMeta(skullMeta);
+        } catch (NoSuchFieldException | IllegalAccessException exception) {
+            Bukkit.getLogger().log(Level.WARNING, "Falha ao aplicar textura customizada na head.", exception);
+        }
 
         return item;
     }
