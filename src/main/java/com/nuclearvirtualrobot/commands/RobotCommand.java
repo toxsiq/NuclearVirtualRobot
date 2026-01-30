@@ -16,7 +16,7 @@ public class RobotCommand implements CommandExecutor {
             return true;
         }
 
-        RobotMenuExample.openExampleMenu(player);
+        RobotMenuExample.openMainMenu(player);
         return true;
     }
 }
