@@ -110,7 +110,22 @@ public class RobotItemListener implements Listener {
         }
 
         if (holder.getMenuType() == RobotMenuType.ECONOMY) {
-            player.sendMessage(Component.text("Menu em construção.", NamedTextColor.YELLOW));
+            RobotType type = holder.getRobotType();
+            if (type == null) {
+                return;
+            }
+            if (event.getSlot() == 11) {
+                RobotMenuExample.openActionsMenu(player, type, RobotEconomy.TOKENS);
+            } else if (event.getSlot() == 13) {
+                RobotMenuExample.openActionsMenu(player, type, RobotEconomy.TOXINA);
+            } else if (event.getSlot() == 15) {
+                RobotMenuExample.openActionsMenu(player, type, RobotEconomy.CASH);
+            }
+            return;
+        }
+
+        if (holder.getMenuType() == RobotMenuType.ACTIONS) {
+            player.sendMessage(Component.text("Opção selecionada.", NamedTextColor.GREEN));
         }
     }
 
@@ -118,6 +133,10 @@ public class RobotItemListener implements Listener {
     public void onActivateRobot(PlayerInteractEvent event) {
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        if (event.getPlayer().isSneaking()) {
             return;
         }
 
