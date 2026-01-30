@@ -28,7 +28,8 @@ public final class CustomHeadFactory {
         }
 
         try {
-            GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+            UUID uuid = UUID.randomUUID();
+            GameProfile profile = new GameProfile(uuid, "head-" + uuid);
             profile.getProperties().put("textures", new Property("textures", base64));
             Field profileField = skullMeta.getClass().getDeclaredField(PROFILE_FIELD);
             profileField.setAccessible(true);
