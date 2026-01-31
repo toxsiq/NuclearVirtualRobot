@@ -23,7 +23,17 @@ public class EconomyAdapter {
             economyType = Class.forName("com.nucleareconomy.EconomyType");
             Object plugin = Bukkit.getPluginManager().getPlugin("NuclearEconomy");
             if (plugin != null) {
-                api = resolveApi(plugin, apiClass);
+                try {
+                    Method getter = plugin.getClass().getMethod("getEconomyAPI");
+                    Object result = getter.invoke(plugin);
+                    if (apiClass.isInstance(result)) {
+                        api = result;
+                    }
+                } catch (Exception ignored) {
+                }
+                if (api == null) {
+                    api = resolveApi(plugin, apiClass);
+                }
             }
             if (api != null) {
                 addBalance = apiClass.getMethod("addBalance", UUID.class, String.class, economyType, double.class);

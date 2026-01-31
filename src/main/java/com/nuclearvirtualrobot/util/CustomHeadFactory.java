@@ -54,7 +54,12 @@ public final class CustomHeadFactory {
 
     private static boolean applyProfileApi(SkullMeta meta, String base64) {
         try {
-            Method createProfile = Bukkit.class.getMethod("createProfile", UUID.class, String.class);
+            Method createProfile;
+            try {
+                createProfile = Bukkit.class.getMethod("createProfile", UUID.class, String.class);
+            } catch (NoSuchMethodException ex) {
+                createProfile = Bukkit.class.getMethod("createPlayerProfile", UUID.class, String.class);
+            }
             UUID uuid = UUID.randomUUID();
             Object profile = createProfile.invoke(null, uuid, "head-" + uuid);
             Class<?> profilePropertyClass = Class.forName("org.bukkit.profile.ProfileProperty");
