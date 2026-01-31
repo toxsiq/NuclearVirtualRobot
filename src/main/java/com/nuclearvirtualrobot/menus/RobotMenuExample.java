@@ -6,6 +6,7 @@ import com.nuclearvirtualrobot.util.CustomHeadFactory;
 import com.nuclearvirtualrobot.util.RobotHeadTextures;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -21,7 +22,7 @@ public final class RobotMenuExample {
 
     public static void openMainMenu(Player player) {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.MAIN, null, null);
-        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Robôs", NamedTextColor.GRAY));
+        Inventory inventory = Bukkit.createInventory(holder, 27, title("Robôs"));
 
         inventory.setItem(11, createTypeItem(RobotType.SIMPLES));
         inventory.setItem(15, createTypeItem(RobotType.SUPREMO));
@@ -31,22 +32,45 @@ public final class RobotMenuExample {
 
     public static void openEconomyMenu(Player player, RobotType type) {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.ECONOMY, type, null);
-        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Robôs " + type.getDisplayName(), NamedTextColor.GRAY));
+        Inventory inventory = Bukkit.createInventory(holder, 27, title("Robôs " + type.getDisplayName()));
 
         inventory.setItem(11, createEconomyItem(RobotEconomy.TOKENS));
         inventory.setItem(13, createEconomyItem(RobotEconomy.TOXINA));
         inventory.setItem(15, createEconomyItem(RobotEconomy.CASH));
+        inventory.setItem(22, createBackItem());
 
         player.openInventory(inventory);
     }
 
     public static void openActionsMenu(Player player, RobotType type, RobotEconomy economy) {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.ACTIONS, type, economy);
-        Inventory inventory = Bukkit.createInventory(holder, 27, Component.text("Robô " + economy.getDisplayName(), NamedTextColor.GRAY));
+        Inventory inventory = Bukkit.createInventory(holder, 27, title("Robô " + economy.getDisplayName()));
 
-        inventory.setItem(11, createActionItem(Material.CHEST, "Recolher", "Recolher produção do robô."));
-        inventory.setItem(13, createActionItem(Material.PAPER, "Informações", "Ver detalhes do robô."));
-        inventory.setItem(15, createActionItem(Material.ANVIL, "Upgrades", "Melhorias do robô."));
+        inventory.setItem(11, createActionItem(Material.CHEST, "Recolher", "Recolher a produção do robô."));
+        inventory.setItem(13, createActionItem(Material.PAPER, "Informações", "Detalhes de geração do robô."));
+        inventory.setItem(15, createActionItem(Material.ANVIL, "Upgrades", "Melhore o robô."));
+        inventory.setItem(22, createBackItem());
+
+        player.openInventory(inventory);
+    }
+
+    public static void openInfoMenu(Player player, RobotType type, RobotEconomy economy) {
+        RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.INFO, type, economy);
+        Inventory inventory = Bukkit.createInventory(holder, 27, title("Info " + economy.getDisplayName()));
+
+        inventory.setItem(13, createInfoItem(type, economy));
+        inventory.setItem(22, createBackItem());
+
+        player.openInventory(inventory);
+    }
+
+    public static void openUpgradeMenu(Player player, RobotType type, RobotEconomy economy) {
+        RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.UPGRADES, type, economy);
+        Inventory inventory = Bukkit.createInventory(holder, 27, title("Upgrades " + economy.getDisplayName()));
+
+        inventory.setItem(11, createActionItem(Material.CLOCK, "Reduzir Delay", "Diminui o tempo entre gerações."));
+        inventory.setItem(15, createActionItem(Material.EMERALD, "Aumentar Quantidade", "Aumenta a produção por ciclo."));
+        inventory.setItem(22, createBackItem());
 
         player.openInventory(inventory);
     }
@@ -55,9 +79,9 @@ public final class RobotMenuExample {
         ItemStack item = new ItemStack(Material.COMPARATOR);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Robô ", NamedTextColor.GRAY)
+            meta.displayName(text("Robô ", NamedTextColor.GRAY)
                     .append(type.displayComponent()));
-            meta.lore(List.of(Component.text("Clique para escolher.", NamedTextColor.DARK_GRAY)));
+            meta.lore(List.of(text("Clique para escolher.", NamedTextColor.DARK_GRAY)));
             item.setItemMeta(meta);
         }
         return item;
@@ -72,9 +96,9 @@ public final class RobotMenuExample {
 
         return CustomHeadFactory.createHead(
                 texture,
-                Component.text("Robô de ", NamedTextColor.GRAY)
+                text("Robô de ", NamedTextColor.GRAY)
                         .append(economy.highlightComponent()),
-                List.of(Component.text("Clique para escolher.", NamedTextColor.DARK_GRAY))
+                List.of(text("Clique para escolher.", NamedTextColor.DARK_GRAY))
         );
     }
 
@@ -82,10 +106,45 @@ public final class RobotMenuExample {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text(title, NamedTextColor.GRAY));
-            meta.lore(List.of(Component.text(description, NamedTextColor.DARK_GRAY)));
+            meta.displayName(text(title, NamedTextColor.GRAY));
+            meta.lore(List.of(text(description, NamedTextColor.DARK_GRAY)));
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private static ItemStack createInfoItem(RobotType type, RobotEconomy economy) {
+        ItemStack item = new ItemStack(Material.BOOK);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(text("Informações do Robô", NamedTextColor.GRAY));
+            meta.lore(List.of(
+                    text("Tipo: ", NamedTextColor.GRAY).append(type.displayComponent()),
+                    text("Economia: ", NamedTextColor.GRAY).append(economy.highlightComponent()),
+                    text("Geração: 0", NamedTextColor.GOLD),
+                    text("Delay: 0s", NamedTextColor.GOLD)
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static ItemStack createBackItem() {
+        ItemStack item = new ItemStack(Material.ARROW);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(text("Voltar", NamedTextColor.GRAY));
+            meta.lore(List.of(text("Retornar ao menu anterior.", NamedTextColor.DARK_GRAY)));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static Component text(String text, NamedTextColor color) {
+        return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private static Component title(String text) {
+        return Component.text(text, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false);
     }
 }

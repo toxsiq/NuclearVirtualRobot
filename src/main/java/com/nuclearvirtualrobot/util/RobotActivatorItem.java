@@ -4,6 +4,7 @@ import com.nuclearvirtualrobot.model.RobotEconomy;
 import com.nuclearvirtualrobot.model.RobotType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -39,13 +40,19 @@ public class RobotActivatorItem {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             Component name = Component.text("Robô de ", NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, false)
                     .append(economy.highlightComponent());
             meta.displayName(name);
             meta.lore(List.of(
-                    Component.text("Tipo: ", NamedTextColor.GRAY).append(type.displayComponent()),
+                    Component.text("Tipo: ", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false)
+                            .append(type.displayComponent()),
                     Component.text("Quantidade: ", NamedTextColor.GRAY)
-                            .append(Component.text(amount, NamedTextColor.WHITE)),
+                            .decoration(TextDecoration.ITALIC, false)
+                            .append(Component.text(amount, NamedTextColor.WHITE)
+                                    .decoration(TextDecoration.ITALIC, false)),
                     Component.text("Shift + clique direito para stackar.", NamedTextColor.DARK_GRAY)
+                            .decoration(TextDecoration.ITALIC, false)
             ));
 
             PersistentDataContainer container = meta.getPersistentDataContainer();

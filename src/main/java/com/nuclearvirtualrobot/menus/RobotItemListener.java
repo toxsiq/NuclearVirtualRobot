@@ -5,6 +5,7 @@ import com.nuclearvirtualrobot.model.RobotType;
 import com.nuclearvirtualrobot.util.RobotActivatorItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -114,7 +115,9 @@ public class RobotItemListener implements Listener {
             if (type == null) {
                 return;
             }
-            if (event.getSlot() == 11) {
+            if (event.getSlot() == 22) {
+                RobotMenuExample.openMainMenu(player);
+            } else if (event.getSlot() == 11) {
                 RobotMenuExample.openActionsMenu(player, type, RobotEconomy.TOKENS);
             } else if (event.getSlot() == 13) {
                 RobotMenuExample.openActionsMenu(player, type, RobotEconomy.TOXINA);
@@ -125,7 +128,47 @@ public class RobotItemListener implements Listener {
         }
 
         if (holder.getMenuType() == RobotMenuType.ACTIONS) {
-            player.sendMessage(Component.text("Opção selecionada.", NamedTextColor.GREEN));
+            RobotType type = holder.getRobotType();
+            RobotEconomy economy = holder.getEconomy();
+            if (type == null || economy == null) {
+                return;
+            }
+            if (event.getSlot() == 22) {
+                RobotMenuExample.openEconomyMenu(player, type);
+            } else if (event.getSlot() == 11) {
+                player.sendMessage(Component.text("Produção recolhida para ", NamedTextColor.GREEN)
+                        .decoration(TextDecoration.ITALIC, false)
+                        .append(economy.highlightComponent())
+                        .append(Component.text(".", NamedTextColor.GREEN)
+                                .decoration(TextDecoration.ITALIC, false)));
+                player.closeInventory();
+            } else if (event.getSlot() == 13) {
+                RobotMenuExample.openInfoMenu(player, type, economy);
+            } else if (event.getSlot() == 15) {
+                RobotMenuExample.openUpgradeMenu(player, type, economy);
+            }
+            return;
+        }
+
+        if (holder.getMenuType() == RobotMenuType.INFO) {
+            if (event.getSlot() == 22 && holder.getRobotType() != null && holder.getEconomy() != null) {
+                RobotMenuExample.openActionsMenu(player, holder.getRobotType(), holder.getEconomy());
+            }
+            return;
+        }
+
+        if (holder.getMenuType() == RobotMenuType.UPGRADES) {
+            if (event.getSlot() == 22 && holder.getRobotType() != null && holder.getEconomy() != null) {
+                RobotMenuExample.openActionsMenu(player, holder.getRobotType(), holder.getEconomy());
+            } else if (event.getSlot() == 11) {
+                player.sendMessage(Component.text("Upgrade de delay aplicado (em breve).", NamedTextColor.GREEN)
+                        .decoration(TextDecoration.ITALIC, false));
+                player.closeInventory();
+            } else if (event.getSlot() == 15) {
+                player.sendMessage(Component.text("Upgrade de quantidade aplicado (em breve).", NamedTextColor.GREEN)
+                        .decoration(TextDecoration.ITALIC, false));
+                player.closeInventory();
+            }
         }
     }
 
@@ -155,10 +198,14 @@ public class RobotItemListener implements Listener {
 
         event.setCancelled(true);
         player.sendMessage(Component.text("Ativador usado: ", NamedTextColor.GREEN)
-                .append(Component.text(amount, NamedTextColor.YELLOW))
-                .append(Component.text(" robôs ", NamedTextColor.GREEN))
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(amount, NamedTextColor.YELLOW)
+                        .decoration(TextDecoration.ITALIC, false))
+                .append(Component.text(" robôs ", NamedTextColor.GREEN)
+                        .decoration(TextDecoration.ITALIC, false))
                 .append(economy.highlightComponent())
-                .append(Component.text(" (" + type.getDisplayName() + ")", NamedTextColor.GRAY)));
+                .append(Component.text(" (" + type.getDisplayName() + ")", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)));
         player.getInventory().removeItem(item);
     }
 }
