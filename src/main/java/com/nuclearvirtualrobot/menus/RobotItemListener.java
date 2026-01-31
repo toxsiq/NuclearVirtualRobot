@@ -207,6 +207,9 @@ public class RobotItemListener implements Listener {
         }
 
         if (event.getPlayer().isSneaking()) {
+            if (service.getActivatorItem().isActivator(event.getItem())) {
+                event.setCancelled(true);
+            }
             return;
         }
 
