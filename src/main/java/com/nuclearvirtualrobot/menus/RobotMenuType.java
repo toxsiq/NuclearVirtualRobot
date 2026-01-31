@@ -4,6 +4,5 @@ public enum RobotMenuType {
     MAIN,
     ECONOMY,
     ACTIONS,
-    INFO,
     UPGRADES
 }

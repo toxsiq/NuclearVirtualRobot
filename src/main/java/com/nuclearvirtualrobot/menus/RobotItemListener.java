@@ -163,17 +163,8 @@ public class RobotItemListener implements Listener {
                             .decoration(TextDecoration.ITALIC, false));
                 }
                 player.closeInventory();
-            } else if (event.getSlot() == 13) {
-                RobotMenuExample.openInfoMenu(player, type, economy);
             } else if (event.getSlot() == 15) {
                 RobotMenuExample.openUpgradeMenu(player, type, economy);
-            }
-            return;
-        }
-
-        if (holder.getMenuType() == RobotMenuType.INFO) {
-            if (event.getSlot() == 22 && holder.getRobotType() != null && holder.getEconomy() != null) {
-                RobotMenuExample.openActionsMenu(player, holder.getRobotType(), holder.getEconomy());
             }
             return;
         }

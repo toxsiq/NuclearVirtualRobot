@@ -1,7 +1,5 @@
 package com.nuclearvirtualrobot.util;
 
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -12,7 +10,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public final class CustomHeadFactory {
     private static final String PROFILE_FIELD = "profile";
@@ -27,10 +24,9 @@ public final class CustomHeadFactory {
             return item;
         }
 
-        if (!applyProfileApi(skullMeta, base64)) {
-            applyAuthlibProfile(skullMeta, base64);
+        if (applyProfileApi(skullMeta, base64)) {
+            item.setItemMeta(skullMeta);
         }
-        item.setItemMeta(skullMeta);
 
         return item;
     }
@@ -75,16 +71,5 @@ public final class CustomHeadFactory {
         }
     }
 
-    private static void applyAuthlibProfile(SkullMeta meta, String base64) {
-        try {
-            UUID uuid = UUID.randomUUID();
-            GameProfile profile = new GameProfile(uuid, "head-" + uuid);
-            profile.getProperties().put("textures", new Property("textures", base64));
-            var field = meta.getClass().getDeclaredField(PROFILE_FIELD);
-            field.setAccessible(true);
-            field.set(meta, profile);
-        } catch (Exception ex) {
-            Bukkit.getLogger().log(Level.WARNING, "Falha ao aplicar textura customizada na head.", ex);
-        }
-    }
+    // Authlib fallback intentionally removed to avoid inconsistent skull meta warnings.
 }

@@ -57,18 +57,8 @@ public final class RobotMenuExample {
         Inventory inventory = Bukkit.createInventory(holder, 27, title("Robô " + economy.getDisplayName()));
 
         inventory.setItem(11, createCollectItem(player, type, economy));
-        inventory.setItem(13, createActionItem(Material.PAPER, "Informações", "Detalhes de geração do robô."));
-        inventory.setItem(15, createActionItem(Material.ANVIL, "Upgrades", "Melhore o robô."));
-        inventory.setItem(22, createBackItem());
-
-        player.openInventory(inventory);
-    }
-
-    public static void openInfoMenu(Player player, RobotType type, RobotEconomy economy) {
-        RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.INFO, type, economy);
-        Inventory inventory = Bukkit.createInventory(holder, 27, title("Info " + economy.getDisplayName()));
-
         inventory.setItem(13, createInfoItem(player, type, economy));
+        inventory.setItem(15, createActionItem(Material.ANVIL, "Upgrades", "Melhore o robô."));
         inventory.setItem(22, createBackItem());
 
         player.openInventory(inventory);
@@ -126,7 +116,7 @@ public final class RobotMenuExample {
     private static ItemStack createInfoItem(Player player, RobotType type, RobotEconomy economy) {
         RobotState state = getState(player, type, economy);
         double generationPerRobot = state.getBaseGeneration() * type.getMultiplier();
-        ItemStack item = new ItemStack(Material.BOOK);
+        ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(text("Informações do Robô", NamedTextColor.GRAY));
