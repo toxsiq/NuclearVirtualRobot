@@ -2,7 +2,9 @@ package com.nuclearvirtualrobot.menus;
 
 import com.nuclearvirtualrobot.model.RobotEconomy;
 import com.nuclearvirtualrobot.model.RobotType;
-import com.nuclearvirtualrobot.util.RobotActivatorItem;
+import com.nuclearvirtualrobot.service.EconomyAdapter;
+import com.nuclearvirtualrobot.service.RobotService;
+import com.nuclearvirtualrobot.store.RobotManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -20,10 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RobotItemListener implements Listener {
-    private final RobotActivatorItem activatorItem;
+    private final RobotService service;
+    private final RobotManager manager;
+    private final EconomyAdapter economyAdapter;
 
-    public RobotItemListener(RobotActivatorItem activatorItem) {
-        this.activatorItem = activatorItem;
+    public RobotItemListener(RobotService service) {
+        this.service = service;
+        this.manager = service.getManager();
+        this.economyAdapter = service.getEconomyAdapter();
     }
 
     @EventHandler
@@ -42,12 +48,12 @@ public class RobotItemListener implements Listener {
         }
 
         ItemStack current = event.getCurrentItem();
-        if (!activatorItem.isActivator(current)) {
+        if (!service.getActivatorItem().isActivator(current)) {
             return;
         }
 
-        RobotType type = activatorItem.getType(current);
-        RobotEconomy economy = activatorItem.getEconomy(current);
+        RobotType type = service.getActivatorItem().getType(current);
+        RobotEconomy economy = service.getActivatorItem().getEconomy(current);
         if (type == null || economy == null) {
             return;
         }
@@ -57,11 +63,11 @@ public class RobotItemListener implements Listener {
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
-            if (!activatorItem.isActivator(item)) {
+            if (!service.getActivatorItem().isActivator(item)) {
                 continue;
             }
-            if (type == activatorItem.getType(item) && economy == activatorItem.getEconomy(item)) {
-                total += activatorItem.getAmount(item);
+            if (type == service.getActivatorItem().getType(item) && economy == service.getActivatorItem().getEconomy(item)) {
+                total += service.getActivatorItem().getAmount(item);
                 slotsToClear.add(i);
             }
         }
@@ -75,7 +81,7 @@ public class RobotItemListener implements Listener {
             player.getInventory().setItem(slot, null);
         }
 
-        ItemStack stacked = activatorItem.createActivator(type, economy, total);
+        ItemStack stacked = service.getActivatorItem().createActivator(type, economy, total);
         player.getInventory().addItem(stacked);
         player.sendMessage(Component.text("Itens combinados em um único ativador.", NamedTextColor.GREEN));
     }
@@ -136,11 +142,24 @@ public class RobotItemListener implements Listener {
             if (event.getSlot() == 22) {
                 RobotMenuExample.openEconomyMenu(player, type);
             } else if (event.getSlot() == 11) {
-                player.sendMessage(Component.text("Produção recolhida para ", NamedTextColor.GREEN)
-                        .decoration(TextDecoration.ITALIC, false)
-                        .append(economy.highlightComponent())
-                        .append(Component.text(".", NamedTextColor.GREEN)
-                                .decoration(TextDecoration.ITALIC, false)));
+                double total = manager.collect(player.getUniqueId(), type, economy);
+                if (total <= 0) {
+                    player.sendMessage(Component.text("Nenhum saldo disponível para sacar.", NamedTextColor.RED)
+                            .decoration(TextDecoration.ITALIC, false));
+                    return;
+                }
+                if (economyAdapter.addBalance(player, economy, total)) {
+                    player.sendMessage(Component.text("Saque realizado: ", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false)
+                            .append(Component.text(formatK(total), NamedTextColor.YELLOW)
+                                    .decoration(TextDecoration.ITALIC, false))
+                            .append(Component.text(" ", NamedTextColor.GREEN)
+                                    .decoration(TextDecoration.ITALIC, false))
+                            .append(economy.highlightComponent()));
+                } else {
+                    player.sendMessage(Component.text("Economia indisponível. Contate a staff.", NamedTextColor.RED)
+                            .decoration(TextDecoration.ITALIC, false));
+                }
                 player.closeInventory();
             } else if (event.getSlot() == 13) {
                 RobotMenuExample.openInfoMenu(player, type, economy);
@@ -161,13 +180,27 @@ public class RobotItemListener implements Listener {
             if (event.getSlot() == 22 && holder.getRobotType() != null && holder.getEconomy() != null) {
                 RobotMenuExample.openActionsMenu(player, holder.getRobotType(), holder.getEconomy());
             } else if (event.getSlot() == 11) {
-                player.sendMessage(Component.text("Upgrade de delay aplicado (em breve).", NamedTextColor.GREEN)
-                        .decoration(TextDecoration.ITALIC, false));
-                player.closeInventory();
+                boolean upgraded = manager.upgradeDelay(player.getUniqueId(), holder.getRobotType(), holder.getEconomy());
+                if (upgraded) {
+                    int delay = manager.getState(player.getUniqueId(), holder.getRobotType(), holder.getEconomy()).getDelaySeconds();
+                    player.sendMessage(Component.text("Upgrade aplicado: Delay agora em " + delay + "s.", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false));
+                    RobotMenuExample.openUpgradeMenu(player, holder.getRobotType(), holder.getEconomy());
+                } else {
+                    player.sendMessage(Component.text("Delay já está no mínimo.", NamedTextColor.RED)
+                            .decoration(TextDecoration.ITALIC, false));
+                }
             } else if (event.getSlot() == 15) {
-                player.sendMessage(Component.text("Upgrade de quantidade aplicado (em breve).", NamedTextColor.GREEN)
-                        .decoration(TextDecoration.ITALIC, false));
-                player.closeInventory();
+                boolean upgraded = manager.upgradeGeneration(player.getUniqueId(), holder.getRobotType(), holder.getEconomy());
+                if (upgraded) {
+                    double generation = manager.getState(player.getUniqueId(), holder.getRobotType(), holder.getEconomy()).getBaseGeneration();
+                    player.sendMessage(Component.text("Upgrade aplicado: Geração base agora em " + formatK(generation) + ".", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false));
+                    RobotMenuExample.openUpgradeMenu(player, holder.getRobotType(), holder.getEconomy());
+                } else {
+                    player.sendMessage(Component.text("Geração já está no máximo.", NamedTextColor.RED)
+                            .decoration(TextDecoration.ITALIC, false));
+                }
             }
         }
     }
@@ -184,19 +217,20 @@ public class RobotItemListener implements Listener {
         }
 
         ItemStack item = event.getItem();
-        if (!activatorItem.isActivator(item)) {
+        if (!service.getActivatorItem().isActivator(item)) {
             return;
         }
 
         Player player = event.getPlayer();
-        RobotType type = activatorItem.getType(item);
-        RobotEconomy economy = activatorItem.getEconomy(item);
-        int amount = activatorItem.getAmount(item);
+        RobotType type = service.getActivatorItem().getType(item);
+        RobotEconomy economy = service.getActivatorItem().getEconomy(item);
+        int amount = service.getActivatorItem().getAmount(item);
         if (type == null || economy == null || amount <= 0) {
             return;
         }
 
         event.setCancelled(true);
+        service.activateRobots(player, type, economy, amount);
         player.sendMessage(Component.text("Ativador usado: ", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false)
                 .append(Component.text(amount, NamedTextColor.YELLOW)
@@ -207,5 +241,12 @@ public class RobotItemListener implements Listener {
                 .append(Component.text(" (" + type.getDisplayName() + ")", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)));
         player.getInventory().removeItem(item);
+    }
+
+    private static String formatK(double value) {
+        if (value >= 1000.0) {
+            return String.format("%.1fK", value / 1000.0).replace(",", ".");
+        }
+        return String.format("%.0f", value);
     }
 }

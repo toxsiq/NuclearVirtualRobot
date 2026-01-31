@@ -2,6 +2,9 @@ package com.nuclearvirtualrobot.menus;
 
 import com.nuclearvirtualrobot.model.RobotEconomy;
 import com.nuclearvirtualrobot.model.RobotType;
+import com.nuclearvirtualrobot.service.RobotService;
+import com.nuclearvirtualrobot.store.RobotManager;
+import com.nuclearvirtualrobot.store.RobotState;
 import com.nuclearvirtualrobot.util.CustomHeadFactory;
 import com.nuclearvirtualrobot.util.RobotHeadTextures;
 import net.kyori.adventure.text.Component;
@@ -17,7 +20,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.List;
 
 public final class RobotMenuExample {
+    private static RobotService service;
+
     private RobotMenuExample() {
+    }
+
+    public static void setService(RobotService robotService) {
+        service = robotService;
     }
 
     public static void openMainMenu(Player player) {
@@ -58,7 +67,7 @@ public final class RobotMenuExample {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.INFO, type, economy);
         Inventory inventory = Bukkit.createInventory(holder, 27, title("Info " + economy.getDisplayName()));
 
-        inventory.setItem(13, createInfoItem(type, economy));
+        inventory.setItem(13, createInfoItem(player, type, economy));
         inventory.setItem(22, createBackItem());
 
         player.openInventory(inventory);
@@ -68,8 +77,8 @@ public final class RobotMenuExample {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.UPGRADES, type, economy);
         Inventory inventory = Bukkit.createInventory(holder, 27, title("Upgrades " + economy.getDisplayName()));
 
-        inventory.setItem(11, createActionItem(Material.CLOCK, "Reduzir Delay", "Diminui o tempo entre gerações."));
-        inventory.setItem(15, createActionItem(Material.EMERALD, "Aumentar Quantidade", "Aumenta a produção por ciclo."));
+        inventory.setItem(11, createDelayUpgradeItem(player, type, economy));
+        inventory.setItem(15, createGenerationUpgradeItem(player, type, economy));
         inventory.setItem(22, createBackItem());
 
         player.openInventory(inventory);
@@ -113,7 +122,10 @@ public final class RobotMenuExample {
         return item;
     }
 
-    private static ItemStack createInfoItem(RobotType type, RobotEconomy economy) {
+    private static ItemStack createInfoItem(Player player, RobotType type, RobotEconomy economy) {
+        RobotState state = getState(player, type, economy);
+        double generationPerRobot = state.getBaseGeneration() * type.getMultiplier();
+        double pending = getPending(player, type, economy);
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -121,8 +133,50 @@ public final class RobotMenuExample {
             meta.lore(List.of(
                     text("Tipo: ", NamedTextColor.GRAY).append(type.displayComponent()),
                     text("Economia: ", NamedTextColor.GRAY).append(economy.highlightComponent()),
-                    text("Geração: 0", NamedTextColor.GOLD),
-                    text("Delay: 0s", NamedTextColor.GOLD)
+                    text("Robôs ativos: " + state.getAmount(), NamedTextColor.GOLD),
+                    text("Geração por robô: " + formatK(generationPerRobot), NamedTextColor.GOLD),
+                    text("Delay: " + state.getDelaySeconds() + "s", NamedTextColor.GOLD),
+                    text("Saldo pronto: " + formatK(pending), NamedTextColor.GREEN)
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static ItemStack createDelayUpgradeItem(Player player, RobotType type, RobotEconomy economy) {
+        RobotState state = getState(player, type, economy);
+        ItemStack item = new ItemStack(Material.CLOCK);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(text("Reduzir Delay", NamedTextColor.GRAY));
+            int current = state.getDelaySeconds();
+            int next = Math.max(RobotManager.MIN_DELAY_SECONDS, current - RobotManager.DELAY_STEP_SECONDS);
+            String line = current <= RobotManager.MIN_DELAY_SECONDS
+                    ? "Delay: " + current + "s (máx)"
+                    : "Delay: " + current + "s -> " + next + "s";
+            meta.lore(List.of(
+                    text(line, NamedTextColor.DARK_GRAY),
+                    text("Diminui o tempo entre gerações.", NamedTextColor.DARK_GRAY)
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static ItemStack createGenerationUpgradeItem(Player player, RobotType type, RobotEconomy economy) {
+        RobotState state = getState(player, type, economy);
+        ItemStack item = new ItemStack(Material.EMERALD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(text("Aumentar Geração", NamedTextColor.GRAY));
+            double current = state.getBaseGeneration();
+            double next = Math.min(RobotManager.MAX_GENERATION, current + RobotManager.GENERATION_STEP);
+            String line = current >= RobotManager.MAX_GENERATION
+                    ? "Geração Base: " + formatK(current) + " (máx)"
+                    : "Geração Base: " + formatK(current) + " -> " + formatK(next);
+            meta.lore(List.of(
+                    text(line, NamedTextColor.DARK_GRAY),
+                    text("Aumenta a produção por ciclo.", NamedTextColor.DARK_GRAY)
             ));
             item.setItemMeta(meta);
         }
@@ -146,5 +200,26 @@ public final class RobotMenuExample {
 
     private static Component title(String text) {
         return Component.text(text, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private static RobotState getState(Player player, RobotType type, RobotEconomy economy) {
+        if (service == null) {
+            return new RobotState(0, RobotManager.BASE_DELAY_SECONDS, RobotManager.BASE_GENERATION, System.currentTimeMillis());
+        }
+        return service.getState(player, type, economy);
+    }
+
+    private static double getPending(Player player, RobotType type, RobotEconomy economy) {
+        if (service == null) {
+            return 0.0;
+        }
+        return service.getManager().getPending(player.getUniqueId(), type, economy);
+    }
+
+    private static String formatK(double value) {
+        if (value >= 1000.0) {
+            return String.format("%.1fK", value / 1000.0).replace(",", ".");
+        }
+        return String.format("%.0f", value);
     }
 }
