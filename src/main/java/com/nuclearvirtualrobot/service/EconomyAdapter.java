@@ -17,23 +17,13 @@ public class EconomyAdapter {
         Object api = null;
         Method addBalance = null;
         Class<?> economyType = null;
+        Class<?> apiClass = null;
         try {
-            Class<?> apiClass = Class.forName("com.nucleareconomy.EconomyAPI");
+            apiClass = Class.forName("com.nucleareconomy.EconomyAPI");
             economyType = Class.forName("com.nucleareconomy.EconomyType");
             Object plugin = Bukkit.getPluginManager().getPlugin("NuclearEconomy");
             if (plugin != null) {
-                try {
-                    Method getter = plugin.getClass().getMethod("getEconomyAPI");
-                    api = getter.invoke(plugin);
-                } catch (NoSuchMethodException ignored) {
-                    try {
-                        var field = plugin.getClass().getDeclaredField("economyAPI");
-                        field.setAccessible(true);
-                        api = field.get(plugin);
-                    } catch (NoSuchFieldException | IllegalAccessException fieldEx) {
-                        Bukkit.getLogger().log(Level.WARNING, "Nao foi possivel acessar EconomyAPI no NuclearEconomy.", fieldEx);
-                    }
-                }
+                api = resolveApi(plugin, apiClass);
             }
             if (api != null) {
                 addBalance = apiClass.getMethod("addBalance", UUID.class, String.class, economyType, double.class);
@@ -62,5 +52,58 @@ public class EconomyAdapter {
             Bukkit.getLogger().log(Level.WARNING, "Falha ao adicionar saldo do NuclearEconomy.", ex);
             return false;
         }
+    }
+
+    private Object resolveApi(Object plugin, Class<?> apiClass) {
+        try {
+            Method getter = plugin.getClass().getMethod("getEconomyAPI");
+            Object result = getter.invoke(plugin);
+            if (apiClass.isInstance(result)) {
+                return result;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            Method getter = plugin.getClass().getMethod("getApi");
+            Object result = getter.invoke(plugin);
+            if (apiClass.isInstance(result)) {
+                return result;
+            }
+        } catch (Exception ignored) {
+        }
+        for (var method : plugin.getClass().getMethods()) {
+            if (apiClass.equals(method.getReturnType()) && method.getParameterCount() == 0) {
+                try {
+                    Object result = method.invoke(plugin);
+                    if (apiClass.isInstance(result)) {
+                        return result;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        try {
+            var field = plugin.getClass().getDeclaredField("economyAPI");
+            field.setAccessible(true);
+            Object result = field.get(plugin);
+            if (apiClass.isInstance(result)) {
+                return result;
+            }
+        } catch (Exception ignored) {
+        }
+        for (var field : plugin.getClass().getDeclaredFields()) {
+            if (apiClass.equals(field.getType())) {
+                try {
+                    field.setAccessible(true);
+                    Object result = field.get(plugin);
+                    if (apiClass.isInstance(result)) {
+                        return result;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        Bukkit.getLogger().log(Level.WARNING, "Nao foi possivel acessar EconomyAPI no NuclearEconomy.");
+        return null;
     }
 }
