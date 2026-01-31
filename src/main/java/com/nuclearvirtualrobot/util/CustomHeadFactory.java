@@ -30,6 +30,7 @@ public final class CustomHeadFactory {
         if (!applyProfileApi(skullMeta, base64)) {
             applyAuthlibProfile(skullMeta, base64);
         }
+        item.setItemMeta(skullMeta);
 
         return item;
     }

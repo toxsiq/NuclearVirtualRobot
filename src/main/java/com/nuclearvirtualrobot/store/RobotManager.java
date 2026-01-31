@@ -25,6 +25,17 @@ public class RobotManager {
                 .computeIfAbsent(economy, key -> new RobotState(0, BASE_DELAY_SECONDS, BASE_GENERATION, System.currentTimeMillis()));
     }
 
+    public void setState(UUID uuid, RobotType type, RobotEconomy economy, RobotState state) {
+        data
+                .computeIfAbsent(uuid, key -> new EnumMap<>(RobotType.class))
+                .computeIfAbsent(type, key -> new EnumMap<>(RobotEconomy.class))
+                .put(economy, state);
+    }
+
+    public Map<UUID, Map<RobotType, Map<RobotEconomy, RobotState>>> getAllStates() {
+        return data;
+    }
+
     public void addRobots(UUID uuid, RobotType type, RobotEconomy economy, int amount) {
         RobotState state = getState(uuid, type, economy);
         state.addAmount(amount);

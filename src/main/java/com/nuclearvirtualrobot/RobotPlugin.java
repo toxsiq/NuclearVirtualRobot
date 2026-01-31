@@ -8,17 +8,21 @@ import com.nuclearvirtualrobot.menus.RobotMenuExample;
 import com.nuclearvirtualrobot.service.EconomyAdapter;
 import com.nuclearvirtualrobot.service.RobotService;
 import com.nuclearvirtualrobot.store.RobotManager;
+import com.nuclearvirtualrobot.store.RobotStorage;
 import com.nuclearvirtualrobot.util.RobotActivatorItem;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class RobotPlugin extends JavaPlugin {
     private RobotService robotService;
     private RobotAPI robotAPI;
+    private RobotStorage robotStorage;
 
     @Override
     public void onEnable() {
         RobotActivatorItem activatorItem = new RobotActivatorItem(this);
         RobotManager manager = new RobotManager();
+        robotStorage = new RobotStorage(this);
+        robotStorage.load(manager);
         EconomyAdapter economyAdapter = new EconomyAdapter();
         robotService = new RobotService(manager, activatorItem, economyAdapter);
         RobotMenuExample.setService(robotService);
@@ -32,6 +36,13 @@ public class RobotPlugin extends JavaPlugin {
         }
 
         getServer().getPluginManager().registerEvents(new RobotItemListener(robotService), this);
+    }
+
+    @Override
+    public void onDisable() {
+        if (robotStorage != null && robotService != null) {
+            robotStorage.save(robotService.getManager());
+        }
     }
 
     public RobotService getRobotService() {
