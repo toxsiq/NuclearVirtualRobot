@@ -1,0 +1,11 @@
+name: NuclearVirtualRobot
+version: 1.0.0
+main: com.nuclearvirtualrobot.RobotPlugin
+api-version: '1.20'
+commands:
+  robo:
+    aliases: [robos]
+    description: Abre o menu de robôs.
+  arobo:
+    aliases: [arobos]
+    description: Gerencia robôs virtuais.
