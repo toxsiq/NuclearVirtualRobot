@@ -6,6 +6,7 @@ import com.nuclearvirtualrobot.service.RobotService;
 import com.nuclearvirtualrobot.store.RobotManager;
 import com.nuclearvirtualrobot.store.RobotState;
 import com.nuclearvirtualrobot.util.CustomHeadFactory;
+import com.nuclearvirtualrobot.util.NumberFormatter;
 import com.nuclearvirtualrobot.util.RobotHeadTextures;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -55,7 +56,7 @@ public final class RobotMenuExample {
         RobotMenuHolder holder = new RobotMenuHolder(RobotMenuType.ACTIONS, type, economy);
         Inventory inventory = Bukkit.createInventory(holder, 27, title("Robô " + economy.getDisplayName()));
 
-        inventory.setItem(11, createActionItem(Material.CHEST, "Recolher", "Recolher a produção do robô."));
+        inventory.setItem(11, createCollectItem(player, type, economy));
         inventory.setItem(13, createActionItem(Material.PAPER, "Informações", "Detalhes de geração do robô."));
         inventory.setItem(15, createActionItem(Material.ANVIL, "Upgrades", "Melhore o robô."));
         inventory.setItem(22, createBackItem());
@@ -125,7 +126,6 @@ public final class RobotMenuExample {
     private static ItemStack createInfoItem(Player player, RobotType type, RobotEconomy economy) {
         RobotState state = getState(player, type, economy);
         double generationPerRobot = state.getBaseGeneration() * type.getMultiplier();
-        double pending = getPending(player, type, economy);
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -134,9 +134,8 @@ public final class RobotMenuExample {
                     text("Tipo: ", NamedTextColor.GRAY).append(type.displayComponent()),
                     text("Economia: ", NamedTextColor.GRAY).append(economy.highlightComponent()),
                     text("Robôs ativos: " + state.getAmount(), NamedTextColor.GOLD),
-                    text("Geração por robô: " + formatK(generationPerRobot), NamedTextColor.GOLD),
-                    text("Delay: " + state.getDelaySeconds() + "s", NamedTextColor.GOLD),
-                    text("Saldo pronto: " + formatK(pending), NamedTextColor.GREEN)
+                    text("Geração por robô: " + NumberFormatter.format(generationPerRobot), NamedTextColor.GOLD),
+                    text("Delay: " + state.getDelaySeconds() + "s", NamedTextColor.GOLD)
             ));
             item.setItemMeta(meta);
         }
@@ -169,11 +168,12 @@ public final class RobotMenuExample {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(text("Aumentar Geração", NamedTextColor.GRAY));
-            double current = state.getBaseGeneration();
-            double next = Math.min(RobotManager.MAX_GENERATION, current + RobotManager.GENERATION_STEP);
-            String line = current >= RobotManager.MAX_GENERATION
-                    ? "Geração Base: " + formatK(current) + " (máx)"
-                    : "Geração Base: " + formatK(current) + " -> " + formatK(next);
+            double maxGeneration = RobotManager.MAX_GENERATION * type.getMultiplier();
+            double current = state.getBaseGeneration() * type.getMultiplier();
+            double next = Math.min(maxGeneration, current + RobotManager.GENERATION_STEP * type.getMultiplier());
+            String line = current >= maxGeneration
+                    ? "Geração Base: " + NumberFormatter.format(current) + " (máx)"
+                    : "Geração Base: " + NumberFormatter.format(current) + " -> " + NumberFormatter.format(next);
             meta.lore(List.of(
                     text(line, NamedTextColor.DARK_GRAY),
                     text("Aumenta a produção por ciclo.", NamedTextColor.DARK_GRAY)
@@ -202,6 +202,21 @@ public final class RobotMenuExample {
         return Component.text(text, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false);
     }
 
+    private static ItemStack createCollectItem(Player player, RobotType type, RobotEconomy economy) {
+        double pending = getPending(player, type, economy);
+        ItemStack item = new ItemStack(Material.CHEST);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(text("Recolher", NamedTextColor.GRAY));
+            meta.lore(List.of(
+                    text("Saldo pronto: " + NumberFormatter.format(pending), NamedTextColor.GREEN),
+                    text("Recolher a produção do robô.", NamedTextColor.DARK_GRAY)
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
     private static RobotState getState(Player player, RobotType type, RobotEconomy economy) {
         if (service == null) {
             return new RobotState(0, RobotManager.BASE_DELAY_SECONDS, RobotManager.BASE_GENERATION, System.currentTimeMillis());
@@ -216,10 +231,4 @@ public final class RobotMenuExample {
         return service.getManager().getPending(player.getUniqueId(), type, economy);
     }
 
-    private static String formatK(double value) {
-        if (value >= 1000.0) {
-            return String.format("%.1fK", value / 1000.0).replace(",", ".");
-        }
-        return String.format("%.0f", value);
-    }
 }

@@ -5,6 +5,7 @@ import com.nuclearvirtualrobot.model.RobotType;
 import com.nuclearvirtualrobot.service.EconomyAdapter;
 import com.nuclearvirtualrobot.service.RobotService;
 import com.nuclearvirtualrobot.store.RobotManager;
+import com.nuclearvirtualrobot.util.NumberFormatter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -142,16 +143,17 @@ public class RobotItemListener implements Listener {
             if (event.getSlot() == 22) {
                 RobotMenuExample.openEconomyMenu(player, type);
             } else if (event.getSlot() == 11) {
-                double total = manager.collect(player.getUniqueId(), type, economy);
-                if (total <= 0) {
+                double total = manager.getPending(player.getUniqueId(), type, economy);
+                if (total <= 0.0) {
                     player.sendMessage(Component.text("Nenhum saldo disponível para sacar.", NamedTextColor.RED)
                             .decoration(TextDecoration.ITALIC, false));
                     return;
                 }
                 if (economyAdapter.addBalance(player, economy, total)) {
+                    manager.collect(player.getUniqueId(), type, economy);
                     player.sendMessage(Component.text("Saque realizado: ", NamedTextColor.GREEN)
                             .decoration(TextDecoration.ITALIC, false)
-                            .append(Component.text(formatK(total), NamedTextColor.YELLOW)
+                            .append(Component.text(NumberFormatter.format(total), NamedTextColor.YELLOW)
                                     .decoration(TextDecoration.ITALIC, false))
                             .append(Component.text(" ", NamedTextColor.GREEN)
                                     .decoration(TextDecoration.ITALIC, false))
@@ -193,7 +195,8 @@ public class RobotItemListener implements Listener {
             } else if (event.getSlot() == 15) {
                 boolean upgraded = manager.upgradeGeneration(player.getUniqueId(), holder.getRobotType(), holder.getEconomy());
                 if (upgraded) {
-                    double generation = manager.getState(player.getUniqueId(), holder.getRobotType(), holder.getEconomy()).getBaseGeneration();
+                    double generation = manager.getState(player.getUniqueId(), holder.getRobotType(), holder.getEconomy()).getBaseGeneration()
+                            * holder.getRobotType().getMultiplier();
                     player.sendMessage(Component.text("Upgrade aplicado: Geração base agora em " + formatK(generation) + ".", NamedTextColor.GREEN)
                             .decoration(TextDecoration.ITALIC, false));
                     RobotMenuExample.openUpgradeMenu(player, holder.getRobotType(), holder.getEconomy());
@@ -244,9 +247,6 @@ public class RobotItemListener implements Listener {
     }
 
     private static String formatK(double value) {
-        if (value >= 1000.0) {
-            return String.format("%.1fK", value / 1000.0).replace(",", ".");
-        }
-        return String.format("%.0f", value);
+        return NumberFormatter.format(value);
     }
 }

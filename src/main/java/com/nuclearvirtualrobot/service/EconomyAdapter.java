@@ -22,8 +22,18 @@ public class EconomyAdapter {
             economyType = Class.forName("com.nucleareconomy.EconomyType");
             Object plugin = Bukkit.getPluginManager().getPlugin("NuclearEconomy");
             if (plugin != null) {
-                Method getter = plugin.getClass().getMethod("getEconomyAPI");
-                api = getter.invoke(plugin);
+                try {
+                    Method getter = plugin.getClass().getMethod("getEconomyAPI");
+                    api = getter.invoke(plugin);
+                } catch (NoSuchMethodException ignored) {
+                    try {
+                        var field = plugin.getClass().getDeclaredField("economyAPI");
+                        field.setAccessible(true);
+                        api = field.get(plugin);
+                    } catch (NoSuchFieldException | IllegalAccessException fieldEx) {
+                        Bukkit.getLogger().log(Level.WARNING, "Nao foi possivel acessar EconomyAPI no NuclearEconomy.", fieldEx);
+                    }
+                }
             }
             if (api != null) {
                 addBalance = apiClass.getMethod("addBalance", UUID.class, String.class, economyType, double.class);
