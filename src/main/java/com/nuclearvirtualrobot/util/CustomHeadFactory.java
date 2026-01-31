@@ -1,18 +1,22 @@
 package com.nuclearvirtualrobot.util;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.profile.ProfileProperty;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public final class CustomHeadFactory {
+    private static final String PROFILE_FIELD = "profile";
+
     private CustomHeadFactory() {
     }
 
@@ -23,11 +27,9 @@ public final class CustomHeadFactory {
             return item;
         }
 
-        UUID uuid = UUID.randomUUID();
-        PlayerProfile profile = Bukkit.createProfile(uuid, "head-" + uuid);
-        profile.setProperty(new ProfileProperty("textures", base64));
-        skullMeta.setOwnerProfile(profile);
-        item.setItemMeta(skullMeta);
+        if (!applyProfileApi(skullMeta, base64)) {
+            applyAuthlibProfile(skullMeta, base64);
+        }
 
         return item;
     }
@@ -47,5 +49,36 @@ public final class CustomHeadFactory {
         }
         item.setItemMeta(meta);
         return item;
+    }
+
+    private static boolean applyProfileApi(SkullMeta meta, String base64) {
+        try {
+            Method createProfile = Bukkit.class.getMethod("createProfile", UUID.class, String.class);
+            UUID uuid = UUID.randomUUID();
+            Object profile = createProfile.invoke(null, uuid, "head-" + uuid);
+            Class<?> profilePropertyClass = Class.forName("org.bukkit.profile.ProfileProperty");
+            Object property = profilePropertyClass.getConstructor(String.class, String.class)
+                    .newInstance("textures", base64);
+            Method setProperty = profile.getClass().getMethod("setProperty", profilePropertyClass);
+            setProperty.invoke(profile, property);
+            Method setOwnerProfile = meta.getClass().getMethod("setOwnerProfile", profile.getClass());
+            setOwnerProfile.invoke(meta, profile);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static void applyAuthlibProfile(SkullMeta meta, String base64) {
+        try {
+            UUID uuid = UUID.randomUUID();
+            GameProfile profile = new GameProfile(uuid, "head-" + uuid);
+            profile.getProperties().put("textures", new Property("textures", base64));
+            var field = meta.getClass().getDeclaredField(PROFILE_FIELD);
+            field.setAccessible(true);
+            field.set(meta, profile);
+        } catch (Exception ex) {
+            Bukkit.getLogger().log(Level.WARNING, "Falha ao aplicar textura customizada na head.", ex);
+        }
     }
 }
